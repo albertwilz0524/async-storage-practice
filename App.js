@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Button, ScrollView } from "react-native";
 import { useState, useEffect } from "react";
 import QuizItem from "./components/QuizItem";
 import Quiz1 from "./Quizzes/Quiz1";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function App() {
   const [bestScore, setBestScore] = useState(0);
@@ -10,6 +11,9 @@ export default function App() {
   const [currentScore, setCurrentScore] = useState(0);
   const [assessmentMode, setAssessmentMode] = useState(false);
   const [showCurrentScore, setShowCurrentScore] = useState(false);
+
+  let bestScoreStored;
+  let firstAttemptScoreStored;
 
   let quiz = [];
 
@@ -53,7 +57,7 @@ export default function App() {
     setQuizItems((prev) => newQuizItems);
   }
 
-  function onSubmitHandler() {
+  async function onSubmitHandler() {
     setAssessmentMode((prev) => true);
     let score = 0;
     for (let item of quizItems) {
@@ -65,6 +69,43 @@ export default function App() {
     }
     setCurrentScore((prev) => score);
     setShowCurrentScore((prev) => true);
+
+    try {
+      firstAttemptScoreStored = await AsyncStorage.getItem(
+        "firstAttemptScoreQuiz1"
+      );
+      if (firstAttemptScoreStored === null) {
+        try {
+          await AsyncStorage.setItem("firstAttemptScoreQuiz1", currentScore);
+        } catch (error) {
+          console.log(error);
+        }
+      }
+
+      bestScoreStored = await AsyncStorage.getItem("bestScoreStoredQuiz1");
+      if (bestScoreStored < currentScore || bestScoreStored === null) {
+        await AsyncStorage.setItem("bestScoreStoredQuiz1", currentScore);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async function getAsyncScore() {
+    try {
+      bestScoreStored = await AsyncStorage.getItem("bestScoreQuiz1");
+      if (bestScoreStored !== null) {
+        setBestScore((prev) => bestScoreStored);
+      }
+      firstAttemptScoreStored = await AsyncStorage.getItem(
+        "firstAttemptScoreQuiz1"
+      );
+      if (firstAttemptScoreStored !== null) {
+        setFirstAttemptScore((prev) => firstAttemptScoreStored);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   return (
