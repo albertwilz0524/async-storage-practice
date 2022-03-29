@@ -7,6 +7,9 @@ import Quiz1 from "./Quizzes/Quiz1";
 export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [firstAttemptScore, setFirstAttemptScore] = useState(0);
+  const [currentScore, setCurrentScore] = useState(0);
+  const [assessmentMode, setAssessmentMode] = useState(false);
+  const [showCurrentScore, setShowCurrentScore] = useState(false);
 
   let quiz = [];
 
@@ -25,6 +28,9 @@ export default function App() {
   const [quizItems, setQuizItems] = useState(quiz);
 
   function onSelectHandler(question, choiceName) {
+    if (assessmentMode) {
+      return;
+    }
     let newQuizItems = [];
     quizItems.map((item) => {
       if (item.question !== question) {
@@ -47,6 +53,20 @@ export default function App() {
     setQuizItems((prev) => newQuizItems);
   }
 
+  function onSubmitHandler() {
+    setAssessmentMode((prev) => true);
+    let score = 0;
+    for (let item of quizItems) {
+      for (let choice of item.choices) {
+        if (choice.isSelected && choice.isCorrect) {
+          score++;
+        }
+      }
+    }
+    setCurrentScore((prev) => score);
+    setShowCurrentScore((prev) => true);
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.titleContainer}>
@@ -58,15 +78,22 @@ export default function App() {
           </Text>
           <Button title="Reset" />
         </View>
+        {showCurrentScore && <Text>Your Current Score is {currentScore}</Text>}
       </View>
       <ScrollView
         style={styles.quizItemsContainer}
         contentContainerStyle={{ alignItems: "center" }}
       >
         {quizItems.map((quizItem, index) => (
-          <QuizItem key={index} info={quizItem} onSelect={onSelectHandler} />
+          <QuizItem
+            key={index}
+            info={quizItem}
+            onSelect={onSelectHandler}
+            assessmentMode={assessmentMode}
+          />
         ))}
       </ScrollView>
+      <Button title="Submit" onPress={onSubmitHandler} />
       <StatusBar hidden />
     </View>
   );
@@ -79,11 +106,11 @@ const styles = StyleSheet.create({
   },
   quizItemsContainer: {
     flex: 1,
-    backgroundColor: "#5566cc",
+    backgroundColor: "#333",
   },
   title: {
     fontSize: 60,
-    color: "#ffffff",
+    color: "black",
     fontWeight: "bold",
   },
   scoresContainer: {
@@ -98,7 +125,6 @@ const styles = StyleSheet.create({
   titleContainer: {
     height: "30%",
     width: "100%",
-    backgroundColor: "red",
     alignItems: "center",
   },
 });

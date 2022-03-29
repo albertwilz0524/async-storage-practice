@@ -1,7 +1,11 @@
 import { View, StyleSheet, Text } from "react-native";
 import Choice from "./Choice";
 
-export default function QuizItem({ info: { question, choices }, onSelect }) {
+export default function QuizItem({
+  info: { question, choices },
+  onSelect,
+  assessmentMode,
+}) {
   return (
     <View style={styles.container}>
       <Text style={styles.question}>{question}</Text>
@@ -13,6 +17,14 @@ export default function QuizItem({ info: { question, choices }, onSelect }) {
           onSelect={onSelect}
         />
       ))}
+      {assessmentMode && (
+        <Text>
+          The correct answer is{" "}
+          {choices
+            .filter((choice) => choice.isCorrect)
+            .map((x) => ` ${x.name}`)}
+        </Text>
+      )}
     </View>
   );
 }
