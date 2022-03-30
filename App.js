@@ -8,12 +8,52 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function App() {
   const [bestScore, setBestScore] = useState(0);
   const [firstAttemptScore, setFirstAttemptScore] = useState(0);
+
+  useEffect(updateScores, []);
+
   const [currentScore, setCurrentScore] = useState(0);
   const [assessmentMode, setAssessmentMode] = useState(false);
-  const [showCurrentScore, setShowCurrentScore] = useState(false);
 
-  let bestScoreStored;
-  let firstAttemptScoreStored;
+  useEffect(async () => {
+    if (assessmentMode) {
+      try {
+        const firstAttemptScoreStored = parseInt(
+          await AsyncStorage.getItem("firstAttemptScore")
+        );
+        if (isNaN(firstAttemptScoreStored)) {
+          await AsyncStorage.setItem("firstAttemptScore", currentScore + "");
+        }
+
+        const bestScoreStored = parseInt(
+          await AsyncStorage.getItem("bestScore")
+        );
+        if (isNaN(bestScoreStored) || currentScore > bestScoreStored) {
+          await AsyncStorage.setItem("bestScore", currentScore + "");
+        }
+
+        updateScores();
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }, [assessmentMode]);
+
+  async function updateScores() {
+    try {
+      const firstAttemptScoreStored = await AsyncStorage.getItem(
+        "firstAttemptScore"
+      );
+      if (firstAttemptScoreStored !== null) {
+        setFirstAttemptScore((prev) => parseInt(firstAttemptScoreStored));
+      }
+      const bestScoreStored = await AsyncStorage.getItem("bestScore");
+      if (bestScoreStored !== null) {
+        setBestScore((prev) => parseInt(bestScoreStored));
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   let quiz = [];
 
@@ -57,7 +97,43 @@ export default function App() {
     setQuizItems((prev) => newQuizItems);
   }
 
-  async function onSubmitHandler() {
+  async function onResetHandler() {
+    setBestScore((prev) => 0);
+    setFirstAttemptScore((prev) => 0);
+    if (assessmentMode) {
+      setAssessmentMode((prev) => false);
+
+      let lol = [...quizItems];
+
+      for (let item of lol) {
+        for (let choice of item.choices) {
+          choice.isSelected = false;
+        }
+      }
+    }
+    try {
+      await AsyncStorage.clear();
+      updateScores();
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
+  function onSubmitHandler() {
+    if (assessmentMode) {
+      setAssessmentMode((prev) => false);
+
+      let lol = [...quizItems];
+
+      for (let item of lol) {
+        for (let choice of item.choices) {
+          choice.isSelected = false;
+        }
+      }
+
+      setQuizItems((prev) => lol);
+      return;
+    }
     setAssessmentMode((prev) => true);
     let score = 0;
     for (let item of quizItems) {
@@ -68,44 +144,6 @@ export default function App() {
       }
     }
     setCurrentScore((prev) => score);
-    setShowCurrentScore((prev) => true);
-
-    try {
-      firstAttemptScoreStored = await AsyncStorage.getItem(
-        "firstAttemptScoreQuiz1"
-      );
-      if (firstAttemptScoreStored === null) {
-        try {
-          await AsyncStorage.setItem("firstAttemptScoreQuiz1", currentScore);
-        } catch (error) {
-          console.log(error);
-        }
-      }
-
-      bestScoreStored = await AsyncStorage.getItem("bestScoreStoredQuiz1");
-      if (bestScoreStored < currentScore || bestScoreStored === null) {
-        await AsyncStorage.setItem("bestScoreStoredQuiz1", currentScore);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  async function getAsyncScore() {
-    try {
-      bestScoreStored = await AsyncStorage.getItem("bestScoreQuiz1");
-      if (bestScoreStored !== null) {
-        setBestScore((prev) => bestScoreStored);
-      }
-      firstAttemptScoreStored = await AsyncStorage.getItem(
-        "firstAttemptScoreQuiz1"
-      );
-      if (firstAttemptScoreStored !== null) {
-        setFirstAttemptScore((prev) => firstAttemptScoreStored);
-      }
-    } catch (error) {
-      console.log(error);
-    }
   }
 
   return (
@@ -117,9 +155,9 @@ export default function App() {
           <Text style={styles.textScore}>
             First Attempt: {firstAttemptScore}
           </Text>
-          <Button title="Reset" />
+          <Button title="Reset" onPress={onResetHandler} />
         </View>
-        {showCurrentScore && <Text>Your Current Score is {currentScore}</Text>}
+        {assessmentMode && <Text>Your Current Score is {currentScore}</Text>}
       </View>
       <ScrollView
         style={styles.quizItemsContainer}
@@ -134,7 +172,10 @@ export default function App() {
           />
         ))}
       </ScrollView>
-      <Button title="Submit" onPress={onSubmitHandler} />
+      <Button
+        title={assessmentMode ? "Try Again" : "Submit"}
+        onPress={onSubmitHandler}
+      />
       <StatusBar hidden />
     </View>
   );
